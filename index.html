@@ -14,36 +14,7 @@
     
     <!-- ✅ Chatbase Chatbot Widget (bottom-right corner) -->
     <script src="https://www.chatbase.co/embed.min.js" id="532dcLpretdBTPff5eL4v" defer></script>
-    <script type="module">
-      (async () => {
-        try {
-          const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
-          const resp = await fetch(`${apiBaseUrl}/api/chatbase-token`);
-          if (!resp.ok) {
-            throw new Error(`Chatbase token request failed with status ${resp.status}`);
-          }
-          const data = await resp.json();
-          if (!data.token) {
-            throw new Error(data.error || 'Chatbase token was not returned by the backend');
-          }
-          const token = data.token;
-          // Identify user after embed script loads
-          if (window.chatbase) {
-            window.chatbase('identify', { token });
-          } else {
-            // In case embed hasn't initialized yet, wait a bit
-            const interval = setInterval(() => {
-              if (window.chatbase) {
-                window.chatbase('identify', { token });
-                clearInterval(interval);
-              }
-            }, 100);
-          }
-        } catch (e) {
-          console.error('Chatbase init error:', e);
-        }
-      })();
-    </script>
+
 
   </head>
   <body>

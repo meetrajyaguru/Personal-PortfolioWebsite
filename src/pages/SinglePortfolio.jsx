@@ -1,9 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
-import axios from 'axios';
 import styled, { createGlobalStyle, keyframes } from "styled-components";
 import { Terminal, Cloud, Cpu } from "lucide-react";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 /* --------------------------------------------------------------
    Color Palette & Theme Variables
@@ -1677,27 +1674,24 @@ export default function SinglePortfolio() {
     setIsContactLoading(true);
     setContactFeedback(null);
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/contact`, contactForm);
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || 'The server did not confirm the submission.');
+      const response = await fetch('/__forms.html', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ 'form-name': 'contact', ...contactForm }).toString(),
+      });
+      if (!response.ok) {
+        throw new Error('Could not submit your message. Please try again.');
       }
 
-      const notificationMessage = response.data.notificationSent === false
-        ? ' The email notification could not be sent.'
-        : '';
       setContactFeedback({
         type: 'success',
-        message: `Submitted successfully.${notificationMessage}`,
+        message: 'Submitted successfully.',
       });
       setContactForm({ name: '', email: '', message: '' });
     } catch (error) {
       setContactFeedback({
         type: 'error',
-        message: error.response?.data?.message
-          || (error.request
-            ? 'Could not reach the server. Check that the backend is running and VITE_API_URL is correct.'
-            : error.message)
-          || 'Could not submit your message. Please try again.',
+        message: error.message || 'Could not submit your message. Please try again.',
       });
     } finally {
       setIsContactLoading(false);
@@ -2159,7 +2153,8 @@ export default function SinglePortfolio() {
               <ContactFormCard>
                 <ContactSmallLabel>GET IN TOUCH</ContactSmallLabel>
                 <ContactHeading>Contact.</ContactHeading>
-                <ContactForm onSubmit={handleContactSubmit}>
+                <ContactForm name="contact" method="POST" data-netlify="true" onSubmit={handleContactSubmit}>
+                  <input type="hidden" name="form-name" value="contact" />
                   <FormField>
                     <FieldLabel htmlFor="contact-name">Your Name</FieldLabel>
                     <FieldInput id="contact-name" name="name" value={contactForm.name} onChange={handleContactChange} placeholder="What's your good name?" minLength={2} maxLength={50} required />
