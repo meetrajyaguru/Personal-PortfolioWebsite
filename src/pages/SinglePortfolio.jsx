@@ -1651,7 +1651,7 @@ const OBJECT_SCALE = 0.25;
 export default function SinglePortfolio() {
   const heroSplineRef = useRef(null);
   const splineContainerRef = useRef(null);
-  const [isSplineContainerReady, setIsSplineContainerReady] = useState(false);
+  const [splineSize, setSplineSize] = useState(null);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [lineStyles, setLineStyles] = useState({ top: 0, height: 0 });
   const [sectionDotOffset, setSectionDotOffset] = useState(0);
@@ -1671,6 +1671,7 @@ export default function SinglePortfolio() {
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
+    if (isContactLoading) return;
     setIsContactLoading(true);
     setContactFeedback(null);
     try {
@@ -1702,10 +1703,14 @@ export default function SinglePortfolio() {
     const container = splineContainerRef.current;
     if (!container) return;
 
+    // Keep the shadow-DOM canvas at a concrete, positive size, including
+    // after viewport changes. Percentage sizing can collapse inside the viewer.
     const observer = new ResizeObserver(([entry]) => {
-      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-        setIsSplineContainerReady(true);
-        observer.disconnect();
+      const width = Math.floor(entry.contentRect.width);
+      const height = Math.floor(entry.contentRect.height);
+      if (width > 0 && height > 0) {
+        setSplineSize(previous => previous?.width === width && previous?.height === height
+          ? previous : { width, height });
       }
     });
 
@@ -1714,33 +1719,37 @@ export default function SinglePortfolio() {
   }, []);
 
   useEffect(() => {
-    const script = document.createElement("script");
-    script.type = "module";
-    script.src = "https://unpkg.com/@splinetool/viewer@1.12.98/build/spline-viewer.js";
-    document.body.appendChild(script);
-
-    const disableCanvasForScroll = () => {
-      const viewer = heroSplineRef.current;
-      if (!viewer) return;
-
-      const canvas = viewer.querySelector("canvas");
-      if (!canvas) {
-        setTimeout(disableCanvasForScroll, 250);
-        return;
-      }
-
-      canvas.style.pointerEvents = "none";
-      canvas.style.touchAction = "none";
-      canvas.style.userSelect = "none";
-    };
-
-    const timers = [300, 600, 900, 1200];
-    timers.forEach((delay) => setTimeout(disableCanvasForScroll, delay));
-
-    return () => {
-      document.body.removeChild(script);
-    };
+    // StrictMode runs effects twice in development. Load the custom element once.
+    if (!document.getElementById("portfolio-spline-viewer")) {
+      const script = document.createElement("script");
+      script.id = "portfolio-spline-viewer";
+      script.type = "module";
+      script.src = "https://unpkg.com/@splinetool/viewer@1.12.98/build/spline-viewer.js";
+      document.body.appendChild(script);
+    }
   }, []);
+
+  useEffect(() => {
+    if (!splineSize) return;
+    let cancelled = false;
+    const initialize = async () => {
+      await customElements.whenDefined("spline-viewer");
+      const viewer = heroSplineRef.current;
+      if (cancelled || !viewer) return;
+      // Wait for the viewer to apply its numeric dimensions before loading WebGL.
+      await viewer.updateComplete;
+      if (cancelled || !viewer.isConnected) return;
+      const canvas = viewer.shadowRoot?.querySelector("canvas");
+      if (canvas) {
+        canvas.style.pointerEvents = "none";
+        canvas.style.touchAction = "none";
+        canvas.style.userSelect = "none";
+      }
+      viewer.url = "https://prod.spline.design/foAZUzfdESGjGTuj/scene.splinecode";
+    };
+    initialize();
+    return () => { cancelled = true; };
+  }, [splineSize]);
 
   // Track dynamic line sizing and positioning based on text locations
   useEffect(() => {
@@ -1856,50 +1865,6 @@ export default function SinglePortfolio() {
     };
   }, []);
 
-  useEffect(() => {
-    const enforce = () => {
-      const viewer = heroSplineRef.current;
-      const app = viewer?.app || viewer?.spline || null;
-
-      if (app?.camera?.controls) {
-        app.camera.controls.enableZoom = false;
-        app.camera.controls.enableRotate = true;
-        app.camera.controls.enablePan = false;
-      } else if (viewer?.camera) {
-        viewer.camera.position?.set?.(0, 0, POSITION_Z);
-        viewer.camera.zoom = CAMERA_ZOOM;
-        viewer.camera.enableRotate = true;
-        viewer.camera.enableZoom = false;
-        viewer.camera.enablePan = false;
-      } else {
-        requestAnimationFrame(enforce);
-      }
-    };
-    enforce();
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const viewer = heroSplineRef.current;
-      const app = viewer?.app || viewer?.spline || null;
-
-      if (app?.camera?.controls) {
-        app.camera.controls.enableZoom = false;
-        app.camera.controls.enableRotate = true;
-        app.camera.controls.enablePan = false;
-      } else if (viewer?.camera) {
-        viewer.camera.position?.set?.(0, 0, POSITION_Z);
-        viewer.camera.zoom = CAMERA_ZOOM;
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    setTimeout(handleResize, 300);
-
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-
   const handleSplineLoad = (splineApp) => {
     try {
       const camera = splineApp.getCamera?.();
@@ -1976,10 +1941,11 @@ export default function SinglePortfolio() {
         </TextSection>
         <ModelWrapper>
           <SplineInner ref={splineContainerRef}>
-            {isSplineContainerReady && (
+            {splineSize && (
               <spline-viewer
                 ref={heroSplineRef}
-                url="https://prod.spline.design/foAZUzfdESGjGTuj/scene.splinecode"
+                width={splineSize.width}
+                height={splineSize.height}
                 zoom={CAMERA_ZOOM.toString()}
                 background="transparent"
                 events-target="global"
@@ -2153,7 +2119,7 @@ export default function SinglePortfolio() {
               <ContactFormCard>
                 <ContactSmallLabel>GET IN TOUCH</ContactSmallLabel>
                 <ContactHeading>Contact.</ContactHeading>
-                <ContactForm name="contact" method="POST" data-netlify="true" onSubmit={handleContactSubmit}>
+                <ContactForm name="contact" method="POST" action="/__forms.html" data-netlify="true" onSubmit={handleContactSubmit}>
                   <input type="hidden" name="form-name" value="contact" />
                   <FormField>
                     <FieldLabel htmlFor="contact-name">Your Name</FieldLabel>
