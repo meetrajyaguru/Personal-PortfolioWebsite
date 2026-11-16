@@ -28,3 +28,8 @@ backend/.env.*
 *.njsproj
 *.sln
 *.sw?
+
+# Local Netlify state; retain deployment feature configuration and summaries.
+.netlify/*
+!.netlify/features/
+!.netlify/results.md
