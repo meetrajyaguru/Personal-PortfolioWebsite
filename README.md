@@ -2,18 +2,15 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
-## Contact form backend
+## Contact form
 
-The contact form saves submissions to MongoDB and sends an email notification through Gmail SMTP.
+The deployed contact form submits to Netlify Forms. Submissions are stored in the site's Netlify dashboard under Forms > contact after deployment, with no separate API server or MongoDB connection required. The static definition in `public/__forms.html` must match the fields submitted by the React form. Form detection is enabled by the deployment feature marker.
 
-1. Keep your existing `backend/.env` and add the SMTP settings shown in `backend/.env.example` (or copy the example for a fresh setup). Preserve your existing `MONGO_URI`.
-2. Set `SMTP_USER` to the Gmail account that will send notifications, and `CONTACT_TO` to the inbox that should receive them.
-3. Create a Google App Password for `SMTP_APP_PASSWORD` (Google requires 2-Step Verification). Do not use your regular Gmail password or commit `backend/.env`.
-4. For local development, the frontend defaults to `http://localhost:5000`. Set `VITE_API_URL` in the frontend environment (see `.env.example`) to the backend origin when deploying the frontend separately.
-5. In MongoDB Atlas, make sure the database user in `MONGO_URI` is active and the backend host is allowed under Network Access. If Node.js reports an SRV DNS lookup error, set `MONGO_DNS_SERVERS` in `backend/.env` to a working DNS resolver address (comma-separated for multiple resolvers); leave it unset otherwise.
-6. Run `npm run dev` from the project root to start both the frontend and backend. The backend requires a reachable MongoDB instance and will report an error instead of silently switching to a local database.
+The form keeps its existing appearance and feedback. Email notifications can be configured through the site's Netlify Forms notification settings; submission success confirms acceptance by Netlify, not email delivery. The legacy `backend/` server is not used by the deployed form.
 
-If SMTP is not configured or Gmail rejects a message, the submission is still saved in MongoDB; the form reports that the email notification was not sent.
+Chatbase uses the existing public widget embed. Anonymous visitors do not need a signed identity token; user identification should only be added alongside authenticated user accounts.
+
+Netlify processes submissions on deployed sites. A plain Vite development server does not emulate Netlify Forms.
 
 Currently, two official plugins are available:
 
