@@ -1,0 +1,5 @@
+# Forward the old (misspelled) site address to the new portfolio address.
+# Scoped to the old hostname only, so the same repo can also be deployed as
+# the meet-rajyaguru site without redirecting to itself.
+https://meets-portoflio.netlify.app/*  https://meet-rajyaguru.netlify.app/:splat  301!
+http://meets-portoflio.netlify.app/*   https://meet-rajyaguru.netlify.app/:splat  301!
